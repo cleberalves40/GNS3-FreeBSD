@@ -1,0 +1,21 @@
+# Ports
+work/
+work-*/
+distfiles/
+packages/
+*.o
+*.a
+*.so
+*.core
+*.log
+*.tmp
+*~
+
+# poudriere
+poudriere/
+.jail-*
+
+# editores
+.DS_Store
+.vscode/
+.idea/
