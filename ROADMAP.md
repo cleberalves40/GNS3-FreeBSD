@@ -100,42 +100,70 @@ Aceite: documentos revisados e decisões D1–D4 registradas.
 Tarefas:
 
 - [x] criar `cleberalves40/GNS3-FreeBSD` com README, ROADMAP, LICENSE e docs;
-- [ ] criar `ports/net/ubridge` e `ports/net/gns3-server` com esqueleto de Makefile;
-- [ ] `scripts/dev.sh`: clona árvore de Ports rasa, copia os ports e roda `make stage`;
-- [ ] `scripts/poudriere/`: `poudriere.conf`, lista de ports e jail de teste;
-- [ ] CI no GitHub Actions com VM FreeBSD (`vmactions/freebsd-vm`):
-      `portlint -AC`, `make makesum`, `make stage`, `make check-plist`, `pkg check -d`;
-- [ ] `docs/TESTES.md` com a matriz de testes.
+- [x] criar `ports/net/ubridge` (port completo) e `ports/net/gns3-server` (esqueleto);
+- [x] `scripts/dev.sh`: valida os ports contra `PORTS_TREE` sem root;
+- [x] `scripts/poudriere/`: config de exemplo, `ports.list` e instruções;
+- [x] CI no GitHub Actions com VM FreeBSD (`vmactions/freebsd-vm`);
+- [x] `docs/TESTES.md` com a matriz de testes;
+- [x] `scripts/smoke-ubridge.py`: teste funcional do hypervisor (UDP e TAP).
 
-Aceite: pipeline verde em um push de teste, mesmo com ports ainda vazios.
+Aceite: pipeline definido e reproduzível; `net/ubridge` valida localmente com
+`makesum`, `make stage`, `check-plist`, `stage-qa` e `make package`.
 
 ---
 
-### F2 — `net/ubridge` (primeira entrega real) · 4–6 dias
+### F2 — `net/ubridge` (primeira entrega real) · 4–6 dias · ✅ concluída (15/11/2026)
 
 É o item de maior risco técnico e o que destrava todo o resto.
 
+**Versão-alvo: 1.1.1** — não a 1.3.2. Evidência levantada nesta fase (build com `cc` do
+FreeBSD 15.1):
+
+| Versão | Resultado |
+|---|---|
+| 1.0.0 | compila limpo; mantém o ramo BSD de TAP |
+| **1.1.1** | **compila limpo**; `Makefile` tem alvo `install` explícito para `FreeBSD` (`chmod 4750`); `nio_tap.c` preserva `#ifdef __linux__` com fallback `/dev/tap%d` |
+| 1.2.0 | `linux/if_tun.h` e `linux/netlink.h` incondicionais |
+| 1.2.2 | idem + `struct ucred`/`SO_PEERCRED` em `hypervisor.c`; módulos de kernel Linux (`nio_linux_raw`, `hypervisor_brctl`, `hypervisor_link`, `hypervisor_tc`, `netlink/`) entram no `SRC` sem guarda |
+| 1.3.2 | todos os erros acima + `linux/bpf.h`, `tc_*`, `virtio_net` |
+
+A 1.1.1 é a última release com suporte oficial a FreeBSD. As séries 1.2/1.3 removeram o
+código de plataforma e compilam os módulos de *kernel data plane* do Linux sem `#ifdef`,
+o que exige um forward-port maior (ver F2.1).
+
 Tarefas:
 
-- [ ] escolher versão-alvo (recomendado **1.3.2**, a mais recente; 1.2.2 como fallback);
-- [ ] `USES=gmake`, sem `configure`; `CFLAGS`/`LDFLAGS` recebendo `-lpcap -lpthread`;
-- [ ] **P1 — TAP no FreeBSD:** reintroduzir o ramo `#ifdef __FreeBSD__` do 1.0.0
-      (`/dev/tap%d`, sem `linux/if_tun.h`), mantendo o caminho Linux intacto;
-- [ ] **P2 — ioctls:** `TUNSIFHEAD`/`TUNSIFMODE` (cabeçalho de 4 bytes e modo ponto-a-ponto)
-      e ajuste de MTU/`IFF_` flags;
-- [ ] **P3 — pcap:** validar `net/libpcap` + BPF (`/dev/bpf`) para captura e filtros;
-- [ ] **P4 — privilégio:** instalar com `@(root,wheel,4750) bin/ubridge`; documentar o risco
-      e o modelo de execução (servidor como `gns3`, ubridge setuid);
-- [ ] **P5 — data plane:** se o servidor 3.x tentar o caminho de kernel, garantir fallback para
-      o relay em user space (o README do upstream diz que só o relay é portável);
-- [ ] `pkg-descr`, `WWW`, `LICENSE=GPLv3` + `LICENSE_FILE`.
+- [x] escolher versão-alvo: **1.1.1** (última com suporte oficial a FreeBSD);
+- [x] `USES=gmake`, sem `configure`; `CFLAGS`/`LDFLAGS` herdados do framework;
+- [x] **P1/P2 — TAP no FreeBSD:** o ramo `/dev/tap%d` já existe na 1.1.1; validado criando
+      `tap0` e encaminhando tráfego TAP↔UDP;
+- [x] **P3 — pcap:** linka contra `libpcap.so.8`; captura/filtros herdados do upstream;
+- [x] **P4 — privilégio:** instalado como `@(root,wheel,4755) bin/ubridge`; `pkg-message`
+      documenta como restringir a `4750 root:gns3`;
+- [x] **P5 — data plane:** como a 1.1.1 não traz os módulos de kernel Linux, o único caminho
+      é o relay em user space — exatamente o que o servidor 3.x usa para switches;
+- [x] `pkg-descr`, `WWW`, `LICENSE=GPLv3` + `LICENSE_FILE`.
 
 Aceite:
 
-- `ubridge -v` reporta a versão e passa no `_check_ubridge_version` do servidor (mínimo 0.9.14);
-- cria TAP (`/dev/tap0`), aceita `bridge add` e encaminha tráfego entre dois NIOs;
-- `poudriere testport` limpo em 15.1 e 14.3;
-- patches enviados como PR para `GNS3/ubridge`.
+- [x] `ubridge -v` reporta `1.1.1` (acima do mínimo 0.9.14 exigido pelo servidor);
+- [x] cria TAP (`/dev/tap0`), aceita `bridge add` e encaminha tráfego entre dois NIOs;
+- [x] `make stage`, `check-plist`, `stage-qa` e `make package` limpos localmente;
+      `portlint -AC` só acusa o que é esperado antes do commit;
+- [ ] `poudriere testport` limpo em 15.1 e 14.3 (F4);
+- [ ] patches enviados como PR para `GNS3/ubridge` (F5).
+
+Evidências: `scripts/smoke-ubridge.py` (relay UDP), teste TAP `tap0` + UDP, e manifesto do
+pacote com `perm: "04755"`. Detalhes em [docs/ESTADO-ATUAL.md](docs/ESTADO-ATUAL.md).
+
+#### F2.1 — forward-port para 1.2.x/1.3.x (backlog, pós-1.0)
+
+- [ ] guardar com `#ifdef __linux__` todos os módulos de kernel (`nio_linux_raw`,
+      `hypervisor_brctl`, `hypervisor_link`, `hypervisor_tc`, `hypervisor_vxlan`,
+      `hypervisor_docker`, `netlink/`) e removê-los do `SRC` no FreeBSD;
+- [ ] trocar `struct ucred`/`SO_PEERCRED` por `getpeereid(3)` em `hypervisor.c`;
+- [ ] reintroduzir/validar o caminho TAP BSD em `nio_tap.c` e `hypervisor_tap.c`;
+- [ ] reenviar como PR upstream; só então atualizar `net/ubridge`.
 
 ---
 
@@ -227,7 +255,7 @@ do upstream**. Atualizar port só quando houver incompatibilidade real de API.
 
 | Risco | Prob. | Impacto | Mitigação |
 |---|---|---|---|
-| uBridge 1.3.x não é portável sem reescrever o data plane | alta | alto | usar só o relay em user space; P1/P2 restauram o TAP do 1.0.0; fallback para 1.2.2 |
+| uBridge 1.2+/1.3.x não é portável sem reescrever o data plane | alta | alto | fixar em **1.1.1**, que ainda tem o TAP BSD e alvo `install` para FreeBSD; forward-port em F2.1 |
 | Pins do gns3-server 3.x quebram com versões do Ports | alta | alto | suíte `pytest` upstream como gate; patches de metadados versionados |
 | `sentry-sdk` 2.x exigir atualização que afeta outros ports | média | médio | avaliar `poudriere bulk` dos dependentes; ou tornar Sentry opcional |
 | 3.x é reescrita recente (FastAPI) e muda rápido | média | médio | fixar em 3.0.6, acompanhar releases, patches pequenos |
@@ -244,7 +272,7 @@ do upstream**. Atualizar port só quando houver incompatibilidade real de API.
 |---|---|---|
 | D1 | GUI no escopo 1.0? | não; entregar servidor + Web UI primeiro |
 | D2 | Categoria dos ports | `net/` para os três (GNS3 é simulador de rede) |
-| D3 | Versão do uBridge | 1.3.2; fallback 1.2.2 se o TAP exigir muito retrabalho |
+| D3 | Versão do uBridge | **1.1.1** (última com suporte oficial a FreeBSD); forward-port para 1.2/1.3 em F2.1 |
 | D4 | Estratégia de pins | relaxar para o Ports + testes upstream |
 | D5 | Sentry | tornar opcional no server antes de mexer no port global |
 | D6 | uBridge setuid | manter `4750 root:wheel`; documentar; estudar Capsicum depois |

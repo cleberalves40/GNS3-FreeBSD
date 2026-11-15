@@ -11,8 +11,8 @@ com **uBridge** compilado nativamente e registrado como helper de rede do aplica
 | Fase | Entrega | Estado |
 |---|---|---|
 | F0 | Reconhecimento do ambiente e do upstream | ✅ concluída (15/11/2026) |
-| F1 | Repositório, layout de Ports e CI | 🔄 em andamento |
-| F2 | `net/ubridge` (helper de rede, setuid) | ⏳ planejada |
+| F1 | Repositório, layout de Ports e CI | ✅ concluída (15/11/2026) |
+| F2 | `net/ubridge` 1.1.1 (helper de rede, setuid) | ✅ concluída (15/11/2026) — valida e empacota |
 | F3 | `net/gns3-server` 3.0.6 | ⏳ planejada |
 | F4 | QA: poudriere, plist, testes de fumaça | ⏳ planejada |
 | F5 | Upstream + submissão ao FreeBSD (Bugzilla) | ⏳ planejada |

@@ -1,0 +1,40 @@
+name: ports-ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  ubridge:
+    name: net/ubridge (FreeBSD)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and validate port
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          prepare: pkg install -y git portlint
+          run: |
+            set -e
+            if [ ! -d /usr/ports/Mk ]; then
+              git clone --depth 1 https://git.FreeBSD.org/ports.git /usr/ports
+            fi
+
+            export PORTSDIR=/usr/ports
+            export DISTDIR=/tmp/distfiles
+            mkdir -p "$DISTDIR"
+
+            cd "$GITHUB_WORKSPACE/ports/net/ubridge"
+            make makesum
+            portlint -AC
+            make stage
+            make check-plist
+            make stage-qa
+
+            # o binario staged tem que executar e reportar a versao
+            ./work/stage/usr/local/bin/ubridge -v

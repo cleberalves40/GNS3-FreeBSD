@@ -1,0 +1,14 @@
+===========================================================================
+uBridge needs elevated privileges to open TAP devices and raw sockets.  It
+is installed setuid root (mode 4755), the same model used by ping(8), so
+the GNS3 server can run as an unprivileged user.
+
+To narrow the exposure, restrict execution to a dedicated group (for
+example, the gns3 user created by net/gns3-server):
+
+  # chgrp gns3 /usr/local/bin/ubridge
+  # chmod 4750 /usr/local/bin/ubridge
+
+The GNS3 server finds the binary automatically.  To point it elsewhere, set
+ubridge_path in gns3_server.conf.
+===========================================================================

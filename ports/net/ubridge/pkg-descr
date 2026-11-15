@@ -1,0 +1,7 @@
+uBridge is a simple user-space bridge used by GNS3 to interconnect emulated
+devices. It links network interfaces through UDP tunnels, UNIX sockets, TAP
+devices and physical Ethernet interfaces, and can capture traffic with libpcap
+and apply per-bridge packet filters (delay, jitter, loss, corruption).
+
+The GNS3 server starts one uBridge hypervisor per project and talks to it over
+a line-based control protocol through a UNIX socket or TCP.
