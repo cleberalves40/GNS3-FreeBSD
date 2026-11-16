@@ -1,0 +1,43 @@
+[
+{
+  message: <<EOD
+GNS3 server
+
+The server runs as user "gns3" with HOME=%%VARBASE%%/db/gns3.  Its database,
+projects, images and appliances live below that directory; logs go to
+%%VARBASE%%/log/gns3.
+
+Enable and start it:
+
+  # sysrc gns3server_enable=YES
+  # service gns3server start
+
+The Web UI and API listen on http://127.0.0.1:3080 by default (API prefix
+/v3, for example GET http://127.0.0.1:3080/v3/version).
+
+Configuration lives in:
+
+  %%ETCDIR%%/gns3_server.conf
+
+The first start creates a default administrator (admin/admin) and a JWT
+secret in %%VARBASE%%/db/gns3/GNS3/secrets.  Change the password right
+after the first login.
+
+Optional components
+-------------------
+- uBridge (required for Ethernet switches): net/ubridge.  For tighter
+  security, restrict the setuid binary to the gns3 group:
+
+    # chgrp gns3 %%PREFIX%%/bin/ubridge
+    # chmod 4750 %%PREFIX%%/bin/ubridge
+
+- Dynamips: emulators/dynamips-community
+- QEMU: emulators/qemu (runs under TCG, there is no KVM on FreeBSD)
+- VPCS: not available in the Ports tree; install it manually and set
+  vpcs_path in the configuration file.
+
+Unsupported node types on FreeBSD: Docker, VirtualBox, VMware, IOU/IOL and
+the GNS3 VM.
+EOD
+}
+]

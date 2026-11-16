@@ -1,0 +1,10 @@
+--- pyproject.toml.orig	2026-01-28 10:49:04 UTC
++++ pyproject.toml
+@@ -5,7 +5,6 @@ description = "GNS3 graphical interface for the GNS3 s
+ [project]
+ name = "gns3-server"
+ description = "GNS3 graphical interface for the GNS3 server."
+-license-files = ["LICENSE"]
+ authors = [
+   { name = "Jeremy Grossmann", email = "developers@gns3.com" }
+ ]

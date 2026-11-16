@@ -31,7 +31,8 @@ ports/
 - Patches sempre com nome completo do caminho (`patch-src_nio_tap.c`), nunca `patch-01`.
 - `patches/` na raiz guarda o patch em formato `git format-patch`, pronto para PR upstream;
   `ports/.../files/` guarda a versão aplicada pelo Ports.
-- `net/ubridge`: `USES=gmake`, `LICENSE=GPLv3`, instalação com `@(root,wheel,4750)`.
+- `net/ubridge`: `USES=gmake`, `LICENSE=GPLv3`, instalação `@(root,wheel,4755)`;
+  `pkg-message` documenta como restringir a `4750 root:gns3`.
 - `net/gns3-server`: `USES=python:3.11+`, `USE_PYTHON=pep517 autoplist`, `USERS=gns3`,
   `GROUPS=gns3`, config via `@sample` em `%%PREFIX%%/etc/xdg/GNS3/`.
 - `MAINTAINER= cleberalves40`.

@@ -13,8 +13,8 @@ com **uBridge** compilado nativamente e registrado como helper de rede do aplica
 | F0 | Reconhecimento do ambiente e do upstream | ✅ concluída (15/11/2026) |
 | F1 | Repositório, layout de Ports e CI | ✅ concluída (15/11/2026) |
 | F2 | `net/ubridge` 1.1.1 (helper de rede, setuid) | ✅ concluída (15/11/2026) — valida e empacota |
-| F3 | `net/gns3-server` 3.0.6 | ⏳ planejada |
-| F4 | QA: poudriere, plist, testes de fumaça | ⏳ planejada |
+| F3 | `net/gns3-server` 3.0.6 | ✅ `testport`, serviço e API passaram em 15.1; suíte upstream pendente |
+| F4 | QA: poudriere, plist, testes de fumaça | 🔄 15.1 passou; ubridge passou em 14.3 EOL; server 14.3 pausado para reinicialização |
 | F5 | Upstream + submissão ao FreeBSD (Bugzilla) | ⏳ planejada |
 | F6 | `net/gns3-gui` (PyQt6) — opcional | ⏳ planejada |
 
@@ -35,6 +35,10 @@ um binário privilegiado invisível para auditoria de pacotes.
 
 **Fora:** nós Docker, VirtualBox, IOU/IOL (binários Linux), NAT cloud via libvirt, data plane
 de kernel do uBridge (veth/VXLAN/tc/netem) e a GNS3 VM.
+
+No FreeBSD, QEMU executa em TCG (emulação por software), sem aceleração KVM; VPCS ainda não tem
+port. O helper uBridge cobre o relay em user space (TAP/UDP/UNIX/Ethernet), não os recursos de
+kernel exclusivos de Linux.
 
 ## Estrutura do repositório
 

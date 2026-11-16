@@ -23,7 +23,7 @@ Resultado esperado, em uma instalação limpa:
 
 ```sh
 pkg install gns3-server ubridge dynamips-community qemu
-sysrc gns3_server_enable=YES
+sysrc gns3server_enable=YES
 service gns3server start
 # GUI/web conecta em http://127.0.0.1:3080
 ```
@@ -71,10 +71,10 @@ Detalhes em [docs/ESTADO-ATUAL.md](docs/ESTADO-ATUAL.md).
    para dentro do nosso port.
 2. **Patch mínimo e documentado.** Cada patch tem um `.patch` nomeado, comentário no Makefile
    e, quando possível, PR upstream.
-3. **Reprodutibilidade.** Todo build de validação roda em `poudriere` em jail limpa, nunca só
-   na máquina de desenvolvimento.
+3. **Reprodutibilidade.** Build local é feedback rápido; aceite de release roda em jail limpa
+   via `poudriere`, não apenas na máquina de desenvolvimento.
 4. **Sem privilégio desnecessário.** O servidor roda como usuário `gns3`; somente o `ubridge`
-   é setuid, com modo restrito (`4750 root:wheel`).
+   é setuid (`4755 root:wheel` por padrão, opcionalmente restrito a `4750 root:gns3`).
 5. **Upstream primeiro.** Se o GNS3 precisar mudar para suportar FreeBSD, abrimos PR lá antes
    de carregar o patch para sempre.
 
@@ -150,7 +150,10 @@ Aceite:
 - [x] cria TAP (`/dev/tap0`), aceita `bridge add` e encaminha tráfego entre dois NIOs;
 - [x] `make stage`, `check-plist`, `stage-qa` e `make package` limpos localmente;
       `portlint -AC` só acusa o que é esperado antes do commit;
-- [ ] `poudriere testport` limpo em 15.1 e 14.3 (F4);
+- [x] `poudriere testport` limpo em FreeBSD 15.1 amd64 (F4; temporariamente com
+      `BUILD_AS_NON_ROOT=no` para contornar o problema de permissões de extração no host);
+- [x] `poudriere testport` em FreeBSD 14.3 amd64 (F4; release EOL, com
+      `ALLOW_UNSUPPORTED_SYSTEM=yes` apenas para a validação);
 - [ ] patches enviados como PR para `GNS3/ubridge` (F5).
 
 Evidências: `scripts/smoke-ubridge.py` (relay UDP), teste TAP `tap0` + UDP, e manifesto do
@@ -167,27 +170,38 @@ pacote com `perm: "04755"`. Detalhes em [docs/ESTADO-ATUAL.md](docs/ESTADO-ATUAL
 
 ---
 
-### F3 — `net/gns3-server` 3.0.6 · 7–10 dias
+### F3 — `net/gns3-server` 3.0.6 · 7–10 dias · 🔄 port inicial passou em jail 15.1
 
 Tarefas:
 
-- [ ] `USES=python:3.11+` e `USE_PYTHON=pep517 autoplist`; `DISTFILES` do sdist do PyPI;
-- [ ] mapear cada dependência para um `py-*` do Ports e **relaxar os pins** via patch de
-      metadados (ver [docs/DEPENDENCIAS.md](docs/DEPENDENCIAS.md));
-- [ ] resolver os três bloqueadores reais:
-      - `sentry-sdk >= 2.50` × Ports em **1.21.1** → atualizar `devel/py-sentry-sdk` ou tornar
-        o Sentry opcional no server;
-      - `aiohttp < 3.14` × Ports em **3.14.5** → validar e relaxar;
-      - `platformdirs < 3` × Ports em **4.14.3** → validar API e relaxar;
-- [ ] `USERS=gns3`, `GROUPS=gns3`; dados em `/var/db/gns3`, logs em `/var/log/gns3`;
-- [ ] config de exemplo em `%%PREFIX%%/etc/xdg/GNS3/gns3_server.conf.sample` (`@sample`),
-      aproveitando o caminho que o 3.0.6 já procura;
-- [ ] `rc.d/gns3server` com `gns3_server_enable`, `_user`, `_group`, `_flags`, `pidfile`,
-      `HOME=/var/db/gns3`, `required_files` apontando para o config;
-- [ ] `pkg-message`: como habilitar, onde ficam projetos e imagens, dependências opcionais;
-- [ ] `pkg-plist` completo (subcomandos `gns3server` e `gns3vmnet`);
-- [ ] rodar a suíte upstream (`pytest`) contra as versões do Ports — é o gate que prova que
-      relaxar pins não quebrou a API.
+- [x] `USES=python:3.11+`, `USE_PYTHON=pep517 autoplist noflavors`, sdist do PyPI e
+      dependências de build `setuptools`/`wheel` declaradas para PEP 517;
+- [x] dependências de runtime mapeadas para `py-*` do Ports com limites relaxados no
+      `RUN_DEPENDS` (sem pip); tabela em [docs/DEPENDENCIAS.md](docs/DEPENDENCIAS.md);
+- [x] `RUN_DEPENDS` em `net/ubridge>=1.1.1` para fornecer o helper de switches Ethernet;
+- [x] Sentry omitido: opcional no upstream e Ports oferece 1.21.1, abaixo do mínimo 2.50;
+      `aiohttp`, `platformdirs`, `websockets` e `py-cpuinfo` usam os ports atuais, ainda
+      sujeitos à suíte upstream em F4;
+- [x] `USERS=gns3`, `GROUPS=gns3`; dados em `/var/db/gns3`, logs em `/var/log/gns3`;
+- [x] config de exemplo em `${PREFIX}/etc/gns3/gns3_server.conf.sample` (`@sample`), passada
+      explicitamente com `--config` porque o upstream procura `/etc/gns3`;
+- [x] `rc.d/gns3server` com `gns3server_enable`, `_user`, `_group`, `_flags`, pidfile,
+      `HOME=/var/db/gns3` e `required_files`;
+- [x] `pkg-message` documenta operação, caminhos e dependências opcionais;
+- [x] `USE_PYTHON=autoplist noflavors` inclui entry points `gns3server` e `gns3vmnet`; config/rc.d e
+      diretórios de dados são mantidos explicitamente na plist;
+- [x] scripts Docker, exclusivos de Linux e com shebangs inválidos em FreeBSD, excluídos do
+      pacote (nós Docker estão fora de escopo);
+- [x] registro privado do UID/GID `gns3` para overlay, necessário até aceitação na árvore oficial;
+- [x] patch pequeno para a chave `license-files`, não reconhecida pelo `setuptools` 63 do Ports;
+- [x] patch de compatibilidade: migrar startup/shutdown para `lifespan` (Starlette 1.x removeu
+      `FastAPI.add_event_handler`);
+- [x] smoke test do servidor staged: `gns3server --version` e `GET /v3/version` → `3.0.6`;
+- [x] `poudriere testport` em FreeBSD 15.1 amd64: build/package/install/deinstall passaram;
+- [x] serviço `rc.d` iniciado/parado como `gns3`; `GET /v3/version` → `3.0.6` usando as versões
+      atuais do Ports; conexão WebSocket do compute local confirmada após inicialização;
+- [ ] rodar a suíte upstream (`pytest`) contra as versões do Ports — gate que prova que
+      relaxar pins não quebrou a API; `pytest-asyncio` não está instalado no host local.
 
 Aceite:
 
@@ -198,15 +212,25 @@ Aceite:
 
 ---
 
-### F4 — QA e empacotamento · 4–5 dias
+### F4 — QA e empacotamento · 4–5 dias · 🔄 validação em jail iniciada
 
-- [ ] `poudriere bulk -t` para `net/ubridge` e `net/gns3-server`;
-- [ ] `portlint -AC`, `make stage-qa`, `make check-plist`, `make check-orphans`;
-- [ ] matriz: 15.1 e 14.3, amd64 (+ aarch64 se houver runner), Python 3.11/3.12/3.13;
+- [x] `poudriere testport` de `net/ubridge` em jails 15.1 e 14.3 amd64: build/package/install/
+      deinstall passaram; 14.3 é EOL e exigiu `ALLOW_UNSUPPORTED_SYSTEM=yes`;
+- [x] `poudriere testport` de `net/gns3-server` em jail 15.1 amd64: build/package/install/
+      deinstall passaram após declarar `setuptools`/`wheel` e registrar o GID/UID no Ports base;
+- [x] serviço na jail: `service gns3server start/status/stop`, usuário `gns3`, banco, segredos e
+      variáveis do controller gravados; API respondeu `3.0.6` com FastAPI 0.142.2_1/Starlette 1.10.0;
+- [x] `poudriere bulk -t` com a lista do projeto: `net/gns3-server` construído; `net/ubridge`
+      reutilizado do `testport` limpo já aprovado;
+- [x] `portlint -AC`, `make stage-qa`, `make check-plist` nos dois ports; `make check-orphans`
+      também passou para `net/gns3-server`;
+- [ ] `net/gns3-server` em FreeBSD 14.3 amd64 (pausado para reinicialização após pressão de swap
+      em `lang/rust`; retomar com um builder; release EOL e `ALLOW_UNSUPPORTED_SYSTEM=yes`);
+- [ ] matriz adicional Python 3.11/3.12/3.13 e aarch64 (se houver runner);
 - [ ] teste de migração do estado atual: `pip uninstall`, `pkg install`, mover dados de
       `~/.config/GNS3` para `/var/db/gns3` e validar um projeto existente;
 - [ ] medir tempo de build e tamanho instalado; ajustar `OPTIONS` se necessário;
-- [ ] documentar limitações (sem KVM no FreeBSD → QEMU em TCG; sem Docker/libvirt/IOU).
+- [x] documentar limitações (sem KVM no FreeBSD → QEMU em TCG; sem Docker/libvirt/IOU/VPCS).
 
 Aceite: relatório de QA anexado ao repositório e todos os checks verdes.
 
@@ -241,10 +265,11 @@ Matriz completa em [docs/DEPENDENCIAS.md](docs/DEPENDENCIAS.md). Situação:
 
 - **OK (usar direto):** aiofiles, Jinja2, psutil, distro, bcrypt, email-validator, watchdog,
   zstandard, truststore.
-- **Patch de pin (versão do Ports mais nova):** fastapi, uvicorn, pydantic2, sqlalchemy20,
+- **Limites relaxados em `RUN_DEPENDS`:** fastapi, uvicorn, pydantic2, sqlalchemy20,
   alembic, aiosqlite, joserfc, python-multipart, websockets, py-cpuinfo2, platformdirs.
-- **Bloqueadores:** `sentry-sdk` (Ports 1.21.1 × mínimo 2.50) e `aiohttp` (Ports 3.14.5 ×
-  exigência `<3.14`).
+- **Sem bloqueador de empacotamento conhecido:** Sentry é opcional e omitido; versões atuais de
+  `aiohttp`, `platformdirs`, `websockets` e `py-cpuinfo` excedem os limites upstream e precisam
+  passar pela suíte upstream em F4.
 
 Estratégia recomendada: **relaxar pins para as versões do Ports e provar com a suíte de testes
 do upstream**. Atualizar port só quando houver incompatibilidade real de API.
@@ -257,10 +282,10 @@ do upstream**. Atualizar port só quando houver incompatibilidade real de API.
 |---|---|---|---|
 | uBridge 1.2+/1.3.x não é portável sem reescrever o data plane | alta | alto | fixar em **1.1.1**, que ainda tem o TAP BSD e alvo `install` para FreeBSD; forward-port em F2.1 |
 | Pins do gns3-server 3.x quebram com versões do Ports | alta | alto | suíte `pytest` upstream como gate; patches de metadados versionados |
-| `sentry-sdk` 2.x exigir atualização que afeta outros ports | média | médio | avaliar `poudriere bulk` dos dependentes; ou tornar Sentry opcional |
+| Mudanças de API nas versões mais novas dos ports Python | média | alto | executar a suíte upstream em jail limpa; manter os limites/revisões no Makefile |
 | 3.x é reescrita recente (FastAPI) e muda rápido | média | médio | fixar em 3.0.6, acompanhar releases, patches pequenos |
 | QEMU sem KVM no FreeBSD (TCG) | certa | médio | documentar desempenho; Dynamips cobre IOS; bhyve fora de escopo |
-| Binário setuid como superfície de ataque | média | alto | modo 4750, dono root, documentar; avaliar Capsicum no futuro |
+| Binário setuid como superfície de ataque | média | alto | `4755 root:wheel` por padrão; documentar redução para `4750 root:gns3`; avaliar Capsicum |
 | Ausência de port do VPCS | média | baixo | documentar; opcional criar `net/vpcs` |
 | Revisão no Bugzilla demorar | média | baixo | PRs pequenos e bem descritos; manter overlay próprio até o commit |
 
@@ -275,7 +300,7 @@ do upstream**. Atualizar port só quando houver incompatibilidade real de API.
 | D3 | Versão do uBridge | **1.1.1** (última com suporte oficial a FreeBSD); forward-port para 1.2/1.3 em F2.1 |
 | D4 | Estratégia de pins | relaxar para o Ports + testes upstream |
 | D5 | Sentry | tornar opcional no server antes de mexer no port global |
-| D6 | uBridge setuid | manter `4750 root:wheel`; documentar; estudar Capsicum depois |
+| D6 | uBridge setuid | `4755 root:wheel` para operação imediata; opcional `4750 root:gns3`; estudar Capsicum depois |
 | D7 | VPCS | fora do escopo 1.0; port futuro |
 | D8 | Onde vivem os patches | `patches/` no repo + PR upstream; remover ao serem aceitos |
 

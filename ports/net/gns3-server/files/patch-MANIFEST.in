@@ -1,0 +1,10 @@
+--- MANIFEST.in.orig	2026-01-28 10:49:04 UTC
++++ MANIFEST.in
+@@ -2,6 +2,7 @@ recursive-include gns3server *
+ include LICENSE
+ include CHANGELOG
+ recursive-include gns3server *
++recursive-exclude gns3server/compute/docker/resources *
+ recursive-exclude docs *
+ recursive-exclude * __pycache__
+ recursive-exclude * *.py[co]

@@ -1,0 +1,66 @@
+[Controller]
+
+; Initial default super admin username and password.
+; They cannot be changed through this file once the controller has started;
+; log in to the Web UI and change the password immediately.
+default_admin_username = admin
+default_admin_password = admin
+
+[Server]
+
+; Hostname returned to clients.
+;name = GNS3_Server
+
+; Address the HTTP API listens on.  Use 0.0.0.0 only if you really need
+; remote clients (for example, a separate GNS3 compute host).
+host = 127.0.0.1
+port = 3080
+protocol = http
+
+; Where secrets (JWT keys) are kept.
+secrets_dir = /var/db/gns3/GNS3/secrets
+
+; Project and image storage.  Kept below the service HOME (/var/db/gns3).
+images_path = /var/db/gns3/GNS3/images
+projects_path = /var/db/gns3/GNS3/projects
+appliances_path = /var/db/gns3/GNS3/appliances
+symbols_path = /var/db/gns3/GNS3/symbols
+configs_path = /var/db/gns3/GNS3/configs
+
+; Do not send crash reports to the GNS3 project from a system service.
+report_errors = False
+
+; The uBridge helper installed by net/ubridge.
+ubridge_path = /usr/local/bin/ubridge
+
+; Console and inter-device port ranges.
+console_start_port_range = 5000
+console_end_port_range = 10000
+udp_start_port_range = 20000
+udp_end_port_range = 30000
+
+; Built-in templates and appliances.
+enable_builtin_templates = True
+install_builtin_appliances = True
+
+[VPCS]
+; VPCS is not available in the FreeBSD Ports tree.  Install it manually
+; and point vpcs_path to the binary to enable VPCS nodes.
+;vpcs_path = vpcs
+
+[Dynamips]
+; dynamips is provided by emulators/dynamips-community and found in PATH.
+;dynamips_path = dynamips
+allocate_aux_console_ports = False
+mmap_support = True
+sparse_memory_support = True
+ghost_ios_support = True
+
+[Qemu]
+; QEMU is provided by emulators/qemu.  There is no KVM on FreeBSD, so
+; virtual machines run under TCG (software emulation).
+enable_hardware_acceleration = False
+require_hardware_acceleration = False
+enable_monitor = True
+monitor_host = 127.0.0.1
+allow_unsafe_options = False

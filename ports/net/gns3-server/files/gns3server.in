@@ -1,0 +1,63 @@
+#!/bin/sh
+#
+# PROVIDE: gns3server
+# REQUIRE: NETWORKING LOGIN
+# KEYWORD: shutdown
+#
+# Add the following line to /etc/rc.conf to enable the GNS3 server:
+#
+# gns3server_enable="YES"
+#
+# Optional settings (defaults shown):
+#
+# gns3server_user="gns3"
+# gns3server_group="gns3"
+# gns3server_datadir="/var/db/gns3"
+# gns3server_logdir="/var/log/gns3"
+# gns3server_config="%%ETCDIR%%/gns3_server.conf"
+# gns3server_flags=""
+
+. /etc/rc.subr
+
+name="gns3server"
+rcvar="${name}_enable"
+command="/usr/sbin/daemon"
+procname="%%PYTHON_CMD%%"
+server_cmd="%%PREFIX%%/bin/gns3server"
+pidfile="/var/run/${name}/${name}.pid"
+
+load_rc_config "${name}"
+
+: ${gns3server_enable:="NO"}
+: ${gns3server_user:="gns3"}
+: ${gns3server_group:="gns3"}
+: ${gns3server_datadir:="%%VARBASE%%/db/gns3"}
+: ${gns3server_logdir:="%%VARBASE%%/log/gns3"}
+: ${gns3server_config:="%%ETCDIR%%/gns3_server.conf"}
+: ${gns3server_flags:=""}
+
+required_files="${gns3server_config}"
+
+command_args="-p ${pidfile} /usr/bin/env HOME=${gns3server_datadir} \
+	GNS3_DATABASE_URI=sqlite+aiosqlite:////${gns3server_datadir}/gns3_controller.db \
+	${server_cmd} --config ${gns3server_config} \
+	--log ${gns3server_logdir}/gns3_server.log \
+	--logmaxsize 10000000 --logbackupcount 5 ${gns3server_flags}"
+
+gns3server_precmd()
+{
+	gns3server_vars="$(dirname "${gns3server_config}")/gns3_controller.vars"
+	install -d -o "${gns3server_user}" -g "${gns3server_group}" -m 0750 \
+		"${gns3server_datadir}" "${gns3server_logdir}" \
+		"/var/run/${name}" "${gns3server_datadir}/GNS3" \
+		"${gns3server_datadir}/GNS3/secrets"
+	if [ ! -e "${gns3server_vars}" ]; then
+		install -o "${gns3server_user}" -g "${gns3server_group}" -m 0640 \
+			/dev/null "${gns3server_vars}"
+		printf '{}\n' > "${gns3server_vars}"
+	fi
+}
+
+start_precmd="gns3server_precmd"
+
+run_rc_command "$1"
